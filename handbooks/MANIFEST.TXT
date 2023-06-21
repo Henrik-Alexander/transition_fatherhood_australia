@@ -1,0 +1,17 @@
+1. Acknowledgements 210.pdf (application/pdf) 63096 bytes.
+1. Readme 210.pdf (application/pdf) 401865 bytes.
+2. Documentation 210c.zip (application/zip) 98767470 bytes.
+2. Frequencies 210c.zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. SAS 210c (Zip file 1 of 4 - Combined Data Files a-k).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. SAS 210c (Zip file 2 of 4 - Combined Data Files l-u).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. SAS 210c (Zip file 3 of 4 - Rperson Data Files).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. SAS 210c (Zip file 4 of 4 - Eperson and Other Data Files).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. SPSS 210c (Zip file 1 of 4 - Combined Data Files a-k).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. SPSS 210c (Zip file 2 of 4 - Combined Data Files l-u).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. SPSS 210c (Zip file 3 of 4 - Rperson Data Files).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. SPSS 210c (Zip file 4 of 4 - Eperson and Other Data Files).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. Stata 210c (Zip file 1 of 4 - Combined Data Files a-k).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. Stata 210c (Zip file 2 of 4 - Combined Data Files l-u).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. Stata 210c (Zip file 3 of 4 - Rperson Data Files).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+2. Stata 210c (Zip file 4 of 4 - Eperson and Other Data Files).zip (application/zip)  skipped because the total size of the download bundle exceeded the limit of 104857600 bytes.
+99_HILDA21GR_Approved_User.pdf (application/pdf) 93396 bytes.

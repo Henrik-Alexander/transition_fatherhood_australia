@@ -79,6 +79,16 @@ data[[wave]] <- dta
 # Combine the data
 data <- bind_rows(data)
 
+# Filter the respondents sex varables
+data <- data |> 
+  pivot_longer(cols = matches("sex"), 
+               names_to = "respondent", 
+               values_to = "sex", 
+               names_prefix = "hgsex") |> 
+  mutate(respondent = as.double(respondent)) |> 
+  filter(respondent == hh_per) |> 
+  select(-respondent)
+
 # Mutate the data
 data <- data |> mutate(int_date = dmy(int_date))
 

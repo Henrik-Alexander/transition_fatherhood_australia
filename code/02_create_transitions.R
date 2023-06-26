@@ -8,13 +8,13 @@
 
 rm(list = ls())
 
-# Load the functions
-source("Functions/packages.R")
-source("Functions/functions.R")
-source("Functions/graphics.R")
-
 # Load the packages
 library(tidyverse)
+
+# Load the functions
+#source("Functions/packages.R")
+source("Functions/functions.R")
+source("Functions/graphics.R")
 
 # Load the data
 load("data/waves.Rda")
@@ -28,7 +28,7 @@ data <- data |>
 
 # Create a birth variable
 data <- data |> 
-  mutate(birth = ifelse(lag(tchad) != tchad, 1, 0))
+  mutate(birth = ifelse(lag(tchad) != tchad & !is.na(tchad) & !is.na(tchad), 1, 0))
 
 # Filter respondents who have not had a birth in the first wave
 data <- data |> 
@@ -40,5 +40,22 @@ data <- data |>
   mutate(spells = n()) |> 
   filter(spells >= 2)
 
+
+# Filter first births and event spell
+data <- data |> 
+  filter(tchad == 0 | (birth == 1 & tchad == 1))
+
+# Filter men
+data <- data |> 
+  filter(sex == 1)
+
+# Estimate age at birth
+data <- data |> 
+  mutate(min_age = if_else(birth == 1, lag(hhiage), NA),
+         max_age = if_else(birth == 1, hhiage, NA))
+
+
+# Save the data
+save(data, file = "data/birth_histories.Rda")
 
 ### END ################################################

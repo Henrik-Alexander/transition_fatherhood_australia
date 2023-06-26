@@ -1,5 +1,0 @@
-{
-    "terminal.integrated.commandsToSkipShell": [
-        ".vsc.attach()"
-    ]
-}

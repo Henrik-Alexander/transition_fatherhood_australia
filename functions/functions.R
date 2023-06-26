@@ -21,19 +21,27 @@ lapply(folders, gen_folder)
 
 #### Tabulate function --------------------------------------
 
-
 tab <- function(...){
-  
   tmp <- table(..., useNA = "always")
   return(tmp)
-  
 }
 
+### TEMPORARILY: Str match funciton -------------------------
+str_matches <- function(string, pattern){
+  tmp <- sum(str_detect(string, pattern))
+  return(tmp)
+}
+
+str_hits <- function(string, pattern){
+  loc <- str_detect(string, pattern)
+  tmp <- string[loc]
+  return(tmp)
+}
 
 ### Create the Gompertz function ---------------------------
 
 # Gompertz function
-Gompertz <- function(x, y0, ymax, k, lag){
+gompertz_function <- function(x, y0, ymax, k, lag){
   result <- y0 + (ymax -y0)*exp(-exp(k*(lag-x)/(ymax-y0) + 1) )
   return(result)
 }
@@ -43,39 +51,30 @@ Gompertz <- function(x, y0, ymax, k, lag){
 
 # Create the model function
 par_surv <- function(data = fert2, distribution = "exponential", parameters = NA){
-  
   if(is.na(parameters) & distribution %!in% c("weibull", "gompertz")){
     # Run the exponential regression
     tmp <- survreg(Surv(Censoring, Event) ~ cohort,
                    dist = distribution,
                    data = data)
-    
   }else if(is.na(parameters) & distribution == "weibull"){
-    
     # Run the weibull regression
     tmp <- weibreg(Surv(Censoring, Event) ~ strata(cohort), data = data)
-    
   }else if(distribution == "gompertz"){
     # Prepare the gompertz data
     gomp_dat <- fert2 |> group_by(bioage, cohort) |> 
       summarise(Exposures = n(),
                 Events    = log(sum(Event)))
-    
     # Run the gompertz regression
     tmp <- nls(Events ~ Gompertz(bioage, y0, ymax, k, lag ),
                data = gomp_dat, 
                start = list(y0 = 0.15, ymax = 7, k = 0.5, lag = 3))
-    
   }else{
     # Run the model
     tmp <- phreg(Surv(Censoring, Event) ~ cohort,
                  dist = distribution,
                  shape = parameters[1],
-                 data = data)
-    
-    
+                 data = data)    
   }
-  
   return(tmp)
 }
 

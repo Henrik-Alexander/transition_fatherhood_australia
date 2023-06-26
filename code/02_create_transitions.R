@@ -22,12 +22,12 @@ load("data/waves.Rda")
 ### Load the data --------------------------------
 
 # Arrange the data
-data <- data |> 
+data <- data |>
   group_by(pid) |>
   arrange(int_date)
 
 # Create a birth variable
-data <- data |> 
+data <- data |>
   mutate(birth = ifelse(lag(tchad) != tchad & !is.na(tchad) & !is.na(tchad), 1, 0))
 
 # Filter respondents who have not had a birth in the first wave
@@ -36,13 +36,13 @@ data <- data |>
   filter(!(spell == 1 & tchad > 0))
 
 # Filter respondents with at least two waves
-data <- data |> 
-  mutate(spells = n()) |> 
+data <- data |>
+  mutate(spells = n()) |>
   filter(spells >= 2)
 
 
 # Filter first births and event spell
-data <- data |> 
+data <- data |>
   filter(tchad == 0 | (birth == 1 & tchad == 1))
 
 # Filter men

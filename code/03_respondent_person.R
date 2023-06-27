@@ -28,21 +28,10 @@ library(tidyverse)
 # The household ID changes across waves
 
 
-
-
-## Load the information for deceased children
-# Variables:
-# _dxyr1:10 = year of birth of the deceased child
-# _dcany    = any children listed at G1f
-# _psyobf   = Father's year of birth
-# _psyobm   = Mother's year of birth
-# _bsad1:10 = Age difference with non-resident sibling
-# _bsoy1    = Is non-resident children older or younger than you
-
 ### RP: Load the respondent person questionaire ------------------------
 
 # Variables
-vars <- c("dxyr", "dcany", "psyobf", "psyobm", "bsad", "bsoy")
+vars <- c("dxyr", "dcany", "psyobf", "psyobm", "bsad", "bsoy", "tcnr")
 
 # Create a wave vector
 waves <- letters[1]
@@ -51,8 +40,9 @@ waves <- letters[1]
 rp <- vector("list", length = length(waves))
 
 # Loop over waves
-for(wave in seq_along(waves)){
-  
+for (wave in seq_along(
+  waves)){
+
   cat("Working on wave", wave, " \n")
 
 # Load the first wave

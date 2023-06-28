@@ -6,117 +6,97 @@
 # Pre-Requisites: full repository     #
 #######################################
 
+## IMPORTANT!!!
+# The household ID changes across waves
+# -> All files are loaded, cleaned and combined via the person ID
+
 rm(list = ls())
 
 # Load the functions
-source("Functions/packages.R")
-source("Functions/functions.R")
-source("Functions/graphics.R")
+source("functions/packages.R")
+source("functions/functions.R")
+source("functions/graphics.R")
 
 # Load the packages
 library(tidyverse)
-
-## Information:
-# The HILDA survey consists of three different questionnaires
-# 1. Household questionnarie
-# 2. Enumerated person questionnaire
-# 3. Respondent person questionnaire
-####
-# All files are loaded, cleaned and combined via the person ID
-
-## IMPORTANT!!!
-# The household ID changes across waves
-
-
-
+library(data.table)
 
 ### HH: Load the household questionnaire ------------------------
-
-### Variables #######################################
-# sex: hgsex1-15
-# age: hgage1-15
-# id : xwaveid
-# hid: hhrhid, Random Household ID -> changes across waves
-# mid: hhbmxid, Mother ID
-# fid: hhbfxid, Father ID
-# hh_size
-# _hgage = Age last birthday at JUne 30 2021
-# _hgyob = year of birth
-
-#########################################
 
 # Create a wave vector
 waves <- letters[1] # 21 Waves
 
 # List the variables
-vars_hh <- c("hgsex", "hgage", "xwaveid", "hhrid", "hhbmxid", "hhbfxid", "hh_size", "hgage", "hgyob")
+vars_hh <- c("hhrhid", "hgxid", "hgsex", "hgage", "hhsize",
+             "hhstate", "hhtype", "hifditp", "hifditn", "hhrih")
 
 # Create a container for the household questionnaires
-hh <- vector("list", length = length(waves))
+hh_long <- hh <- vector("list", length = length(waves))
 
 # Loop over waves
-for(wave in seq_along(waves)){
-  
-  cat("Working on wave", wave, " \n")
+for (wave in seq_along(waves)){
+
+cat("Working on wave", wave, " \n")
 
 # Load the first wave
 path <- paste0("raw/STATA-files/Household_", waves[wave], "210c.dta")
-
-# Load the data
 dta  <- haven::read_dta(path) |> as.data.frame()
 
-# Remove the beginning of the variables
+# Remove the wave-letter at the beginning of the variable name
 names(dta) <- str_remove(names(dta), paste0("^", waves[wave]))
 
+# Select the important variables
+dta <- dta |> select(matches(vars_hh))
 
-# Children variables
-#dta <- dta |> select( matches(vars))
+# Recode -1 to NA
+dta <- dta |> replace_with_na_all(condition = ~.x == -1)
 
-# Assign the wave
+### Clean the multi factor variables ---------------------
+
+# Insert a dash between numbers and letters
+names(dta) <- sub("(\\d+)$", "_\\1", names(dta))
+
+# Create long variables
+dta1 <- long_hh_data(dta, "hgsex", new_variable = "sex")
+dta2 <- long_hh_data(dta, "hgxid", new_variable = "pid")
+dta3 <- long_hh_data(dta, "hgage", new_variable = "age")
+dta4 <- long_hh_data(dta, "hhrih", new_variable = "rel")
+
+# Combine the data
+dta_long <- merge(dta1, dta2) |>
+               merge(dta3) |>
+                merge(dta4)
+
+### Continue with the single item data -----------------------
+
+# Assign the wave number to the variable "wave"
 dta$wave <- wave
 
+# Estimate the disposable annual household income
+dta$inc_disp <- with(dta, hifditp - hifditn)
 
-# Create long data of respondents
+# Keep the single-item variables in the data
+dta <- dta |> select(!contains("_"), !contains("hifdit"))
 
+# Rename the variable names
+dta <- dta  |>
+          rename(
+            id_hh   = hhrhid,
+            reg     = hhstate,
+          )
+
+# Assign the data to the lists
+hh[[wave]] <- dta
+hh_long[[wave]] <- dta_long
 
 }
 
 # Bind the data
-hh <- rbindlist(hh)
+hh      <- rbindlist(hh)
+hh_long <- rbindlist(hh_long)
 
+# Save the data
+save(hh, file = "data/hh_cleaned.Rda")
+save(hh_long, file = "data/hh_long_cleaned.Rda")
 
-
-
-# Variables to be selected for the analysis
-vars <- paste0(waves[wave], c("xwaveid", "hhrpid",  # Panel information
-                              "hhrhid", "hhhqivw", "hhpers", # Household information
-                              "hhpers", "hhsm",    # Sample and household information
-                              "lsrelsp", "ordfmar", # Relationship and marriage
-                             "tchad", "chave",      # Number of children
-                             "hhiage",             # Respondents age
-                             "cepn",                # Child's person number
-                             "hgsex", "hgyob", "yodeath",    # Demographics
-                              "hhwte", "hhwtrps", "hhwtrp")) # Weigths 
-
-
-
-
-# Children variables
-dta <- dta |> select( matches(vars))
-
-# Rename variables
-dta <- dta |> 
-  rename(
-    pid = hhrpid,
-    hid = hhrhid,
-    int_date = hhhqivw,
-    hh_per = hhpers,
-    rel = lsrelsp,
-    mar = ordfmar,
-    yob = hgyob,
-    wht_des = hhwte,
-    wht_rep = hhwtrps,
-    wht_rep2 = hhwtrp
-    
-  )
 ###### END ########################################

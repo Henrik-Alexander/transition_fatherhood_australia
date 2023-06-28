@@ -9,47 +9,28 @@
 rm(list = ls())
 
 # Load the functions
-source("Functions/packages.R")
-source("Functions/functions.R")
-source("Functions/graphics.R")
+source("functions/packages.R")
+source("functions/functions.R")
+source("functions/graphics.R")
 
 # Load the packages
 library(tidyverse)
 
-## Information:
-# The HILDA survey consists of three different questionnaires
-# 1. Household questionnarie
-# 2. Enumerated person questionnaire
-# 3. Respondent person questionnaire
-####
-
-# Enumerated person file: contains information on ALL household members
-
-# All files are loaded, cleaned and combined via the person ID
-
-## IMPORTANT!!!
-# The household ID changes across waves
-
-## Variables ##################################
-# _hhbfxid = biological Father's cross wave id
-# _hhbmxid = biological Mother's cross wave id
-# xwaveid  = cross wave ID
-# hgyob    = year of birth
-###############################################
-
 ### EP: Load the enumerated person questionaire ------------------------
 
 # Create a vector of variables
-vars <- c("hbfxid", "hbmxid", "xwaveid", "hgyob")
+vars <- c("hhbfxid", "hhbmxid", "hhpxid", "xwaveid", "hhrhid",
+          "hgni", "wscef", "wscei", "hgyob", "hhwte", "hhwtes")
 
 # Create a wave vector
-waves <- letters[1:21] # 21 Waves
+waves <- letters[1:21]
 
 # Create a container for the household questionnaires
 ep <- vector("list", length = length(waves))
 
 # Loop over waves
-for (wave in seq_along(waves)){
+for (wave in seq_along(waves)) {
+
   cat("Working on wave", wave, " \n")
 
 # Load the first wave
@@ -62,40 +43,33 @@ dta  <- haven::read_dta(path) |> as_tibble()
 names(dta) <- str_remove(names(dta), paste0("^", waves[wave]))
 
 # Children variables
-dta <- dta |> select(tidyselect::matches(vars))
+dta <- dta[, vars]
 
 # Assign the wave
 dta$wave <- wave
 
-# Assign the data to the list
+# Assign the data
 ep[[wave]] <- dta
 
 }
 
-# Bind the data.frames together
+# Bind the data
 ep <- rbindlist(ep)
 
-# Rename the variables
-ep <- ep[ , .(fath_id = hhbfxid,
-              moth_id = hhbmxid,
-              pid     = xwaveid,
-              yob     = hgyob,
-              wave)]
+# Rename variables
+ep <- ep  |>
+rename(id_moth = hhbfxid,
+       id_fath = hhbmxid,
+       id_part = hhpxid,
+       id      = xwaveid,
+       id_hh   = hhrhid,
+       int     = hgni,
+       inc     = wscef,
+       inc_imp = wscei,
+       yob     = hgyob)
 
+       
 # Save the data
-save(ep, file = "data/ep_cleaned.Rda")
+save(ep, file = "data/enumerate_data_cleaned.Rda")
 
-### Descriptives -----------------------------------
-
-# Distributions 
-dist <- ep[, .(counts = .N), by = xwaveid]
-hist(dist$counts)
-
-
-#
-
-
-#
-
-
-### END #############################################
+### END ############################################

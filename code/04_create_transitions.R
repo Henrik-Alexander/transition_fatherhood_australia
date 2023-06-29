@@ -12,14 +12,49 @@ rm(list = ls())
 library(tidyverse)
 
 # Load the functions
-#source("Functions/packages.R")
-source("Functions/functions.R")
-source("Functions/graphics.R")
+source("functions/functions.R")
+source("functions/graphics.R")
 
-# Load the data
-load("data/waves.Rda")
 
 ### Load the data --------------------------------
+
+#  Load the data
+load("data/rp_data.Rda")
+load("data/hh_cleaned.Rda")
+load("data/hh_long_cleaned.Rda")
+load("data/ep_cleaned.Rda")
+
+
+# 1. Estimate births over consecutive waves --------
+
+# Group and sort the data
+rp <- rp[order(id, wave), ]
+
+# Estimate the transitions
+rp <- rp[ , .(birth = nchild - shift(nchild, n = 1, type = "lag")), by = id]
+
+#
+
+# 2. Estimate the person members in hh -------------
+
+# Use hh data
+head(hh_long)
+
+
+
+# 3. Estimate the relatives outside hh -------------
+
+# Load the ep data
+
+# Load the 
+
+
+# 4. Estimate deceased children ------------------
+
+### Combine the different data sets --------------
+
+
+### 
 
 # Arrange the data
 data <- data |>
@@ -31,7 +66,7 @@ data <- data |>
   mutate(birth = ifelse(lag(tchad) != tchad & !is.na(tchad) & !is.na(tchad), 1, 0))
 
 # Filter respondents who have not had a birth in the first wave
-data <- data |> 
+data <- data |>
   mutate(spell = row_number()) |> 
   filter(!(spell == 1 & tchad > 0))
 
@@ -46,11 +81,11 @@ data <- data |>
   filter(tchad == 0 | (birth == 1 & tchad == 1))
 
 # Filter men
-data <- data |> 
+data <- data |>
   filter(sex == 1)
 
 # Estimate age at birth
-data <- data |> 
+data <- data |>
   mutate(min_age = if_else(birth == 1, lag(hhiage), NA),
          max_age = if_else(birth == 1, hhiage, NA))
 

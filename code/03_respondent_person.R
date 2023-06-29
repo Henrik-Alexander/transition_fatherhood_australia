@@ -16,8 +16,12 @@ source("Functions/graphics.R")
 # Load the packages
 library(tidyverse)
 
+
 ## IMPORTANT!!!
 # The household ID changes across waves
+
+### Specify the respondent questionnaire ---------------------------
+
 
 # Variables to be selected for the analysis
 vars <- c("xwaveid", "hhrpid",    # Panel information
@@ -30,6 +34,21 @@ vars <- c("xwaveid", "hhrpid",    # Panel information
   "hhwte", "hhwtrps", "hhwtrp",   # Weigths
   "edagels")                      # Education
 
+### Specify the fertility questionnaires --------------------------
+
+# Specify the waves
+fert_waves <- c(5, 8, 11, 15, 19)
+
+# Create a container
+fert_dec <- fert <- vector("list", length = length(fert_waves))
+
+# Specify variables
+vars_fert <- c("xwaveid", "hhrhid",          # Identifiers
+  "tcr", "tcnr",                # Number of children
+  "rcyng", "ncyng",              # Age of the youngest child
+  "tcn04", "tcn514", "tcn1524", # Number of children at ages
+  "tcr04", "tcr514", "tcr1524", # Number of non-resid children
+  "dcany", "dyr", "dcperm")     # Deceased children
 
 ### RP: Load the respondent person questionaire ------------------------
 
@@ -40,8 +59,7 @@ waves <- letters[1:21] # 21 Waves
 rp <- vector("list", length = length(waves))
 
 # Loop over waves
-for (wave in seq_along(
-  waves)){
+for (wave in seq_along(waves)){
 
   cat("Working on wave", wave, " \n")
 
@@ -54,7 +72,29 @@ dta  <- haven::read_dta(path) |> as.data.frame()
 # Remove the beginning of the variables
 names(dta) <- str_remove(names(dta), paste0("^", waves[wave]))
 
-# Children variables
+### Fertility data -------------------------------------
+if (wave %in% fert_waves) {
+
+# Select children variables
+dta_fert <- dta |> select(contains(vars_fert))
+
+# Reshape to long data
+deceased_child <- long_rep_data(dta_fert,
+ variable = "dcdyr",
+ new_variable = "yob_dec_child")
+
+ # Assign the wave
+deceased_child$wave <- dta_fert$wave <- wave
+
+# Assign the wave to the list
+fert[[wave]]     <- dta_fert
+fert_dec[[wave]] <- deceased_child
+
+}
+
+### Continue with the person data -----------------------------
+
+# Select the variables variables
 dta <- dta |> select(contains(vars))
 
 # Assign the wave
@@ -65,9 +105,10 @@ rp[[wave]] <- dta
 
 }
 
-
 # Bind the data
-rp <- rbindlist(rp, fill = TRUE)
+rp   <- rbindlist(rp,       fill = TRUE)
+fert <- rbindlist(fert,     fill = TRUE)
+fert_dec <- rbindlist(fert_dec, fill = TRUE)
 
 # Rename variables
 rp <- rp |>
@@ -86,5 +127,34 @@ rp <- rp |>
 
 # Save the data
 save(rp, file = "data/rp_data.Rda")
+
+### Rename the fertility data ----------------------
+
+# Rename variables
+fert <- fert[ , .(id    = xwaveid,
+          id_hh = hhrhid,
+          nchild_res = tcr,
+          nchild_non_res = tcnr,
+          age_res_child = rcyng,
+          age_non_res_chi = ncyng,
+          nchi_non_res_0_4 = tcn04,
+          nchi_non_res_5_14 = tcn514,
+          nchi_non_res15_24 = tcn1524,
+          nchi_res_0_4 = tcr04,
+          nchi_res_5_14 = tcr514,
+          nchi_res15_24 = tcr1524,
+          wave) ]
+
+# Save the data
+save(fert,     file = "data/fert_major.Rda")
+save(fert_dec, file = "data/fert_deceased.Rda")
+
+### Load the History and status of parents -------------------------
+
+# Specify the waves of the major modules
+parent_waves <- c(8, 12, 15, 19)
+waves <- letters[parent_waves[1]]
+
+
 
 ### END #########################################

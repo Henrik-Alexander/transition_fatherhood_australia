@@ -92,7 +92,7 @@ birth_date <- birth_date[, .(min = min(birth), max = max(birth)), by = pid]
 
 # Estimate birth date
 random_date <- function(min, max) {
-  if (!is.na(min) & !is.na(max) & births >= 0 & !is.na(births)) {
+  if (!is.na(min) && !is.na(max)) {
     tmp <-  sample(x = seq(from = min, to = max, by = "day"),
                size = 1)
   } else {
@@ -101,19 +101,33 @@ random_date <- function(min, max) {
   return(tmp)
 }
 
-# Pivot wider
-apply(birth_date[, .(min, max)], MARGIN = 1, random_date)
-birth_date[, birth_date := random_date(var1 = min, var2 = max)]
+# Apply map to dates is a known issue:
+# See the discussion: https://github.com/tidyverse/purrr/issues/358
+dates <- map2(.x = birth_date$min, .y = birth_date$max, .f = random_date)
+birth_date$birth_date <- lubridate::NA_Date_
+for (i in 1:length(birth_dates)) birth_date$birth_date[i] <- dates[i]
 
-birth_date$birth_date <- as.numeric(cbind(purrr::map2(
-    	                                .x = birth_date$min,
-                                      .y = birth_date$max,
-                                      .f = random_date)))
 
 # Merge the data sets
-rp <- merge(rp, birth_date[, .(id, birth_date)], all = TRUE)
+hh_long <- merge(hh_long, birth_date[, .(pid, birth_date)], by = "pid", all = TRUE)
 
+# Get the parent child information across households
+parent_child <- unique(ep[, .(id_moth, id_fath, id, yob)])
 
+# Merge with parent and child information
+hh_child <- merge(hh_long, parent_child, by.x = "pid", by.y = "id")
+
+# Merge with the parent's information
+hh_child <- merge(hh_child, rp[, .(id, birth_date)], 
+by.x = "id_fath", by.y = "id", suffixes = c("", "_father"))
+hh_child <- merge(hh_child, rp[, .(id, birth_date)], 
+by.x = "id_fath", by.y = "id", suffixes = c("_child", "_mother"))
+
+# Reshape to long format
+melt(hh_child, id.vars = "pid",
+                measure.vars = "birth_date_",
+                variable_name = "parent",
+                value_name = "birth_date")
 
 
 # 3. Estimate the relatives outside hh -------------

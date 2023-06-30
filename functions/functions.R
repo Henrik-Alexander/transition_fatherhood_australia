@@ -38,7 +38,7 @@ str_hits <- function(string, pattern){
   return(tmp)
 }
 
-# Create long data of respondents --------------------------
+# Create long data of households --------------------------
 long_hh_data <- function(dta, variable, new_variable = "sex") {
   vars <- names(dta)[str_detect(names(dta), pattern = variable)]
   tmp <- data.table::as.data.table(dta)
@@ -48,6 +48,19 @@ long_hh_data <- function(dta, variable, new_variable = "sex") {
   tmp$hh_nr <- str_remove(tmp$hh_nr, "[a-z]*_")
   return(tmp)
 }
+
+
+# Create long data of respondents --------------------------
+long_rep_data <- function(dta, variable, new_variable = "dec_nr") {
+  vars <- names(dta)[str_detect(names(dta), pattern = variable)]
+  tmp <- data.table::as.data.table(dta)
+  tmp <- tmp[, c(..vars, "xwaveid")]
+  tmp <- data.table::melt(tmp, id.vars = "xwaveid", mueasure.vars = vars,
+  variable.name = "rep_nr", value.name = new_variable)
+  tmp$rep_nr <- str_remove(tmp$rep_nr, "[a-z]*")
+  return(tmp)
+}
+
 
 ### Create the Gompertz function ---------------------------
 

@@ -1,5 +1,5 @@
 #######################################
-# Purpose: Loading the HILDA data     #
+# Purpose: Loading the household data #
 # Author: Henrik-Alexander Schubert   #
 # Date: 14.06.2023                    #
 # E-Mail: schubert@demogr.mpg.de      #
@@ -24,11 +24,12 @@ library(data.table)
 ### HH: Load the household questionnaire ------------------------
 
 # Create a wave vector
-waves <- letters[1] # 21 Waves
+waves <- letters[1:21] # 21 Waves
 
 # List the variables
 vars_hh <- c("hhrhid", "hgxid", "hgsex", "hgage", "hhsize",
-             "hhstate", "hhtype", "hifditp", "hifditn", "hhrih")
+             "hhstate", "hhtype", "hifditp", "hifditn", "hhrih",
+             "hhhqivw")
 
 # Create a container for the household questionnaires
 hh_long <- hh <- vector("list", length = length(waves))
@@ -48,8 +49,9 @@ names(dta) <- str_remove(names(dta), paste0("^", waves[wave]))
 # Select the important variables
 dta <- dta |> select(matches(vars_hh))
 
-# Recode -1 to NA
-dta <- dta |> replace_with_na_all(condition = ~.x == -1)
+# Transform the date
+dta$hhhqivw[dta$hhhqivw %in% c("-4/-4/  -4", " ./  /" )] <- NA_character_
+dta$hhhqivw <- dmy(dta$hhhqivw)
 
 ### Clean the multi factor variables ---------------------
 
@@ -64,8 +66,14 @@ dta4 <- long_hh_data(dta, "hhrih", new_variable = "rel")
 
 # Combine the data
 dta_long <- merge(dta1, dta2) |>
-               merge(dta3) |>
+                merge(dta3)    |>
                 merge(dta4)
+
+# Filter persons
+dta_long <- dta_long[pid != "-------", ]
+
+# Add the wave
+dta_long$wave <- wave
 
 ### Continue with the single item data -----------------------
 
@@ -78,13 +86,6 @@ dta$inc_disp <- with(dta, hifditp - hifditn)
 # Keep the single-item variables in the data
 dta <- dta |> select(!contains("_"), !contains("hifdit"))
 
-# Rename the variable names
-dta <- dta  |>
-          rename(
-            id_hh   = hhrhid,
-            reg     = hhstate,
-          )
-
 # Assign the data to the lists
 hh[[wave]] <- dta
 hh_long[[wave]] <- dta_long
@@ -94,6 +95,13 @@ hh_long[[wave]] <- dta_long
 # Bind the data
 hh      <- rbindlist(hh)
 hh_long <- rbindlist(hh_long)
+
+# Rename variables
+setnames(hh, c("hhrhid", "hhstate", "hhhqivw"),
+             c("id_hh", "reg", "int_date"))
+
+# Rename variables
+setnames(hh_long, c("hhrhid"), c("id_hh"))
 
 # Save the data
 save(hh, file = "data/hh_cleaned.Rda")

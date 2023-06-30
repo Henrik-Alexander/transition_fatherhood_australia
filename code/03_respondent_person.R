@@ -9,19 +9,19 @@
 rm(list = ls())
 
 # Load the functions
-source("Functions/packages.R")
-source("Functions/functions.R")
-source("Functions/graphics.R")
+source("functions/packages.R")
+source("functions/functions.R")
+source("functions/graphics.R")
 
 # Load the packages
 library(tidyverse)
-
+library(lubridate)
+library(data.table)
 
 ## IMPORTANT!!!
 # The household ID changes across waves
 
 ### Specify the respondent questionnaire ---------------------------
-
 
 # Variables to be selected for the analysis
 vars <- c("xwaveid", "hhrpid",    # Panel information
@@ -32,7 +32,7 @@ vars <- c("xwaveid", "hhrpid",    # Panel information
   "hhiage", "hgage", "hgagef",    # Respondents age
   "hgsex",                        # Demographics
   "hhwte", "hhwtrps", "hhwtrp",   # Weigths
-  "edagels")                      # Education
+  "edagels", "hhidate")                      # Education
 
 ### Specify the fertility questionnaires --------------------------
 
@@ -44,11 +44,12 @@ fert_dec <- fert <- vector("list", length = length(fert_waves))
 
 # Specify variables
 vars_fert <- c("xwaveid", "hhrhid",          # Identifiers
-  "tcr", "tcnr",                # Number of children
-  "rcyng", "ncyng",              # Age of the youngest child
-  "tcn04", "tcn514", "tcn1524", # Number of children at ages
-  "tcr04", "tcr514", "tcr1524", # Number of non-resid children
-  "dcany", "dyr", "dcperm")     # Deceased children
+                "tcr", "tcnr",                # Number of children
+                "rcyng", "ncyng",              # Age of the youngest child
+                "tcn04", "tcn514", "tcn1524", # Number of children at ages
+                "tcr04", "tcr514", "tcr1524", # Number of non-resid children
+                "dcany", "dyr", "dcperm",     # Deceased children
+                "hhidate")                    # Interview date
 
 ### RP: Load the respondent person questionaire ------------------------
 
@@ -63,7 +64,7 @@ for (wave in seq_along(waves)){
 
   cat("Working on wave", wave, " \n")
 
-# Load the first wave
+# Set the path to the file for the specific wave
 path <- paste0("raw/STATA-files/Rperson_", waves[wave], "210c.dta")
 
 # Load the data
@@ -71,6 +72,9 @@ dta  <- haven::read_dta(path) |> as.data.frame()
 
 # Remove the beginning of the variables
 names(dta) <- str_remove(names(dta), paste0("^", waves[wave]))
+
+# Transform the date
+dta$hhidate <- dmy(dta$hhidate)
 
 ### Fertility data -------------------------------------
 if (wave %in% fert_waves) {
@@ -122,8 +126,33 @@ rp <- rp |>
     age_june = hhiage,
     wht_rep = hhwtrps,
     wht_rep2 = hhwtrp,
-    fert_int = icniz
+    fert_int = icniz,
+    int_date = hhidate
   )
+
+### Create a birth date variable -----------------------------------
+
+# Select the age and birthdate variable
+birth_date <- rp[, .(id, wave, birth = int_date %m-% years(age))]
+
+# Get the min and max date
+birth_date <- birth_date[, .(min = min(birth), max = max(birth)), by = id]
+
+# Estimate birth date
+random_date <- function(var1, var2) {
+  tmp <- sample(x = seq(from = var1, to = var2, by = "day"), size = 1)
+  return(tmp)
+}
+
+# Pivot wider
+birth_date$birth_date <- cbind(purrr::map2(
+    	                                .x = birth_date$min,
+                                      .y = birth_date$max,
+                                      .f = random_date))
+
+# Merge the data sets
+rp <- merge(rp, birth_date[, .(id, birth_date)], all = TRUE)
+
 
 # Save the data
 save(rp, file = "data/rp_data.Rda")
@@ -131,7 +160,7 @@ save(rp, file = "data/rp_data.Rda")
 ### Rename the fertility data ----------------------
 
 # Rename variables
-fert <- fert[ , .(id    = xwaveid,
+fert <- fert[, .(id    = xwaveid,
           id_hh = hhrhid,
           nchild_res = tcr,
           nchild_non_res = tcnr,
@@ -143,18 +172,23 @@ fert <- fert[ , .(id    = xwaveid,
           nchi_res_0_4 = tcr04,
           nchi_res_5_14 = tcr514,
           nchi_res15_24 = tcr1524,
-          wave) ]
+          dc_permission = dcperm,
+          int_date      = hhidate,
+          wave)]
+
+
+# Rename the variables for fertility deceaced
+fert_dec <- fert_dec[, .(id = xwaveid, rep_nr, yob_dec_child, wave)]
 
 # Save the data
 save(fert,     file = "data/fert_major.Rda")
 save(fert_dec, file = "data/fert_deceased.Rda")
+
 
 ### Load the History and status of parents -------------------------
 
 # Specify the waves of the major modules
 parent_waves <- c(8, 12, 15, 19)
 waves <- letters[parent_waves[1]]
-
-
 
 ### END #########################################

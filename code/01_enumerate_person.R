@@ -54,7 +54,7 @@ ep[[wave]] <- dta
 }
 
 # Bind the data
-ep <- rbindlist(ep)
+ep <- rbindlist(ep, fill = TRUE)
 
 # Rename variables
 ep <- ep  |>
@@ -66,10 +66,11 @@ rename(id_moth = hhbfxid,
        int     = hgni,
        inc     = wscef,
        inc_imp = wscei,
-       yob     = hgyob)
+       yob     = hgyob,
+       int_date=scdate)
 
        
 # Save the data
-save(ep, file = "data/enumerate_data_cleaned.Rda")
+save(ep, file = "data/ep_cleaned.Rda")
 
 ### END ############################################

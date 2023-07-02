@@ -41,7 +41,7 @@ cat("Working on wave", wave, " \n")
 
 # Load the first wave
 path <- paste0("raw/STATA-files/Household_", waves[wave], "210c.dta")
-dta  <- haven::read_dta(path) |> as.data.frame()
+dta  <- haven::read_dta(path) |> zap_labels()
 
 # Remove the wave-letter at the beginning of the variable name
 names(dta) <- str_remove(names(dta), paste0("^", waves[wave]))

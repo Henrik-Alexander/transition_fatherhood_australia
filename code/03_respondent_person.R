@@ -68,7 +68,7 @@ for (wave in seq_along(waves)){
 path <- paste0("raw/STATA-files/Rperson_", waves[wave], "210c.dta")
 
 # Load the data
-dta  <- haven::read_dta(path) |> as.data.frame()
+dta  <- haven::read_dta(path) |> zap_labels()
 
 # Remove the beginning of the variables
 names(dta) <- str_remove(names(dta), paste0("^", waves[wave]))

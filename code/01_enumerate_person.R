@@ -37,7 +37,7 @@ for (wave in seq_along(waves)) {
 path <- paste0("raw/STATA-files/Eperson_", waves[wave], "210c.dta")
 
 # Load the data
-dta  <- haven::read_dta(path) |> as_tibble()
+dta  <- haven::read_dta(path) |> zap_labels()
 
 # Remove the beginning of the variables
 names(dta) <- str_remove(names(dta), paste0("^", waves[wave]))
@@ -66,8 +66,9 @@ rename(id_moth = hhbfxid,
        int     = hgni,
        inc     = wscef,
        inc_imp = wscei,
-       yob     = hgyob,
-       int_date=scdate)
+       yob     = hgyob#,
+       #int_date=scdate
+       )
 
        
 # Save the data

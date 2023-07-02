@@ -1,7 +1,8 @@
+
 #######################################
 # Purpose: Creating event data        #
 # Author: Henrik-Alexander Schubert   #
-# Date: 14.06.2023                    #
+# Date: 91.07.2023                    #
 # E-Mail: schubert@demogr.mpg.de      #
 # Pre-Requisites: full repository     #
 #######################################
@@ -28,14 +29,11 @@ load("data/fert_major.Rda")
 
 # 1. Estimate births over consecutive waves --------
 
-# Make a data table
-rp <- as.data.table(rp)
-
 # Make missings
 rp$nch[rp$nch < 0] <- NA
 
 # Create the lagged variable
-births <- rp[order(id, wave),
+bir_rp <- rp[order(id, wave),
  .(lag_nch = shift(nch, n = 1, type = "lag"),
    min_age = shift(age, n = 1, type = "lag"),
    max_age = age,
@@ -44,11 +42,11 @@ births <- rp[order(id, wave),
    by = id]
 
 # Create the lagged birth variable
-births <- births[, .(birth    = nch - lag_nch, wave, lag_nch, min_age,
+bir_rp <- bir_rp[, .(birth    = nch - lag_nch, wave, lag_nch, min_age,
                      age_diff = max_age - min_age, min_date), by = id]
 
 # Bind cols
-rp <- merge(births, rp)
+rp <- merge(rp, bir_rp, by = c("id", "wave"))
 
 # Function: Sample a birth date for the children using a uniform distribution
 sample_date <- function(min, max, births) {
@@ -62,10 +60,14 @@ sample_date <- function(min, max, births) {
 }
 
 # Sample the birth date
-rp$child_birth_date <- unlist(pmap(
-  .l = list(rp$min_date, rp$int_date, rp$birth),
-  .f = sample_date))
-
+dates <- pmap(.l = list(rp$min_date, rp$int_date, rp$birth), .f = sample_date)
+rp$birth_date <- lubridate::NA_Date_
+for (i in seq_along(dates)) {
+rp$birth_date[i] <- dates[i]
+if (round(i / length(dates) * 10) %in% 1:10) {
+cat("Progress: ", 1 / length(dates) * 100, "% \n")
+  }
+}
 
 # Estimate the age at birth
 rp$age_birth <- as.numeric(interval(rp$child_birth_date, rp$birth_date))
@@ -75,7 +77,7 @@ rp$age_birth <- as.numeric(interval(rp$child_birth_date, rp$birth_date))
 table(rp$birth, rp$edu)
 # Apparently the negative birth counts are concentrated in lower education strata
 
-# 2. Estimate the person members in hh -------------
+# 2. Estimate the person members in hh ---------------------------
 
 # Household background
 hh_back <- hh[, .(id_hh, wave, int_date)]
@@ -101,15 +103,16 @@ random_date <- function(min, max) {
   return(tmp)
 }
 
-# Apply map to dates is a known issue:
+# Sample the birth dates
+# Apply map to dates is a known problem:
 # See the discussion: https://github.com/tidyverse/purrr/issues/358
 dates <- map2(.x = birth_date$min, .y = birth_date$max, .f = random_date)
 birth_date$birth_date <- lubridate::NA_Date_
-for (i in 1:length(birth_dates)) birth_date$birth_date[i] <- dates[i]
-
+for (i in seq_along(birth_dates)) birth_date$birth_date[i] <- dates[i]
 
 # Merge the data sets
-hh_long <- merge(hh_long, birth_date[, .(pid, birth_date)], by = "pid", all = TRUE)
+hh_long <- merge(hh_long, birth_date[, .(pid, birth_date)], 
+                  by = "pid", all = TRUE)
 
 # Get the parent child information across households
 parent_child <- unique(ep[, .(id_moth, id_fath, id, yob)])
@@ -130,14 +133,21 @@ melt(hh_child, id.vars = "pid",
                 value_name = "birth_date")
 
 
-# 3. Estimate the relatives outside hh -------------
+# 3. Estimate the relatives outside hh -------------------------
 
-# Load the ep data
+# 1. Get the birth year of each child
+fert[, birth_year = year(int_date - years(age_non_res_chi))]
+
+# Load the non-resident children from the fertility modules
+num_nr <- fert[, nchild_non_res, by = .(id, wave)]
+num_nr[, .(max_nchild_non_res = nchild_non_res, spells = .N), by = id]
+
+
 
 # Load the 
 
 
-# 4. Estimate deceased children ------------------
+# 4. Estimate deceased children ---------------------------------
 
 # PROBLEM: Are there twins?
 
@@ -164,6 +174,17 @@ save(dec_births, file = "data/deceased_births.Rda")
 
 
 ### 
+
+
+### Test the data quality ------------------------------
+
+
+# Are the number in nchild and birth dates the same?
+
+#
+
+
+### Look at the data -----------------------------------
 
 # Arrange the data
 data <- data |>

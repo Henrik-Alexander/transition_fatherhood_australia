@@ -38,8 +38,7 @@ bir_rp <- rp[order(id, wave),
    min_age = shift(age, n = 1, type = "lag"),
    max_age = age,
    min_date = shift(int_date),
-   wave, nch),
-   by = id]
+   wave, nch),  by = id]
 
 # Create the lagged birth variable
 bir_rp <- bir_rp[, .(birth    = nch - lag_nch, wave, lag_nch, min_age,
@@ -61,16 +60,12 @@ sample_date <- function(min, max, births) {
 
 # Sample the birth date
 dates <- pmap(.l = list(rp$min_date, rp$int_date, rp$birth), .f = sample_date)
-rp$birth_date <- lubridate::NA_Date_
-for (i in seq_along(dates)) {
-rp$birth_date[i] <- dates[i]
-if (round(i / length(dates) * 10) %in% 1:10) {
-cat("Progress: ", 1 / length(dates) * 100, "% \n")
-  }
-}
+
+# Bind with the respondent date
+rp[, birth_date := dates]
 
 # Estimate the age at birth
-rp$age_birth <- as.numeric(interval(rp$child_birth_date, rp$birth_date))
+rp[, age_par :=  as.numeric(interval(rp$child_birth_date, rp$birth_date))]
 
 ## Problem: negative births
 #  Cross check by education
@@ -170,7 +165,7 @@ dec_births <- merge(dec_births, twins_dec, all = TRUE, key = "id")
 save(dec_births, file = "data/deceased_births.Rda")
 
 
-### Combine the different data sets --------------
+### Combine the different data sets -----------------------------
 
 
 ### 

@@ -138,24 +138,23 @@ birth_date <- rp[, .(id, wave, birth = int_date %m-% years(age))]
 # Get the min and max date
 birth_date <- birth_date[, .(min = min(birth), max = max(birth)), by = id]
 
-# Estimate birth date
-random_date <- function(var1, var2) {
-  tmp <- sample(x = seq(from = var1, to = var2, by = "day"), size = 1)
-  return(tmp)
-}
-
-# Pivot wider
-birth_date$birth_date <- cbind(purrr::map2(
-    	                                .x = birth_date$min,
-                                      .y = birth_date$max,
-                                      .f = random_date))
+# Estimate the random birth date
+birth_date[, birth_date := sample_date(min, max)]
 
 # Merge the data sets
 rp <- merge(rp, birth_date[, .(id, birth_date)], all = TRUE)
 
-
 # Save the data
 save(rp, file = "data/rp_data.Rda")
+
+
+### Save the birth dates ---------------------------
+
+# Select the important variables
+birth_dates <- unique(rp[, .(id, birth_date)])
+
+# Save the data
+save(birth_dates, file = "data/birth_dates.Rda")
 
 ### Rename the fertility data ----------------------
 

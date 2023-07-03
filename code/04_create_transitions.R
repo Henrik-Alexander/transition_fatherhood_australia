@@ -2,7 +2,7 @@
 #######################################
 # Purpose: Creating event data        #
 # Author: Henrik-Alexander Schubert   #
-# Date: 91.07.2023                    #
+# Date: 31.07.2023                    #
 # E-Mail: schubert@demogr.mpg.de      #
 # Pre-Requisites: full repository     #
 #######################################
@@ -47,26 +47,15 @@ bir_rp <- bir_rp[, .(birth    = nch - lag_nch, wave, lag_nch, min_age,
 # Bind cols
 rp <- merge(rp, bir_rp, by = c("id", "wave"))
 
-# Function: Sample a birth date for the children using a uniform distribution
-sample_date <- function(min, max) {
-    res <- lubridate::interval(min, max) / lubridate::days(1)
-    loc <- vector("integer", length = length(res))
-     for (i in seq_along(res)) {
-      if (!is.na(res[i])) {
-      loc[i] <- sample(1:res[i], 1)
-      } else { 
-      loc[i] <- lubridate::NA_Date_
-      }
-    }
-    tmp <- min + loc
-return(tmp)
-}
-
 # Sample the birth date
+# Function: Sample a birth date for the children using a uniform distribution
 rp[, child_birth_date := sample_date(min_date, int_date)]
 
 # Estimate the age at birth
-rp[, age_par :=  as.numeric(interval(child_birth_date, birth_date))]
+rp[, age_par :=  interval(birth_date, child_birth_date) / years(1)]
+
+#
+hist(rp$age_par)
 
 ## Problem: negative births
 #  Cross check by education
@@ -88,22 +77,10 @@ birth_date <- hh_long[, .(pid, wave, birth = int_date %m-% years(age))]
 # Get the min and max date
 birth_date <- birth_date[, .(min = min(birth), max = max(birth)), by = pid]
 
-# Estimate birth date
-random_date <- function(min, max) {
-  if (!is.na(min) && !is.na(max)) {
-    tmp <-  sample(x = seq(from = min, to = max, by = "day"),
-               size = 1)
-  } else {
-    tmp <- lubridate::NA_Date_
-  }
-  return(tmp)
-}
-
 # Sample the birth dates
 # Apply map to dates is a known problem:
 # See the discussion: https://github.com/tidyverse/purrr/issues/358
-dates <- map2(.x = birth_date$min, .y = birth_date$max, .f = random_date)
-birth_date[, birth_date := dates]
+birth_date[, birth_date := sample_date(min, max)]
 
 # Merge the data sets
 hh_long <- merge(hh_long, birth_date[, .(pid, birth_date)], 
@@ -118,7 +95,7 @@ hh_child <- merge(hh_long, parent_child, by.x = "pid", by.y = "id")
 # Merge with the parent's information
 hh_child <- merge(hh_child, rp[, .(id, birth_date)], 
 by.x = "id_fath", by.y = "id", suffixes = c("", "_father"))
-hh_child <- merge(hh_child, rp[, .(id, birth_date)], 
+hh_child <- merge(hh_child, rp[, .(id, birth_date)],
 by.x = "id_fath", by.y = "id", suffixes = c("_child", "_mother"))
 
 # Reshape to long format
@@ -130,16 +107,36 @@ melt(hh_child, id.vars = "pid",
 
 # 3. Estimate the relatives outside hh -------------------------
 
-# 1. Get the birth year of each child
-fert[, birth_year = year(int_date - years(age_non_res_chi))]
+# 3.1. Use the age of the youngest child
+# Get the birth year of each child
+fert[, birth_year := year(int_date - years(age_non_res_chi))]
+
+# Load the birth dates
+load("data/birth_dates.Rda")
+
+# Merge with the birth dates
+fert <- merge(fert, birth_dates)
+
+# Estimate the age at birth for the youngest child
+fert[, age_par_young := birth_year - year(birth_date)]
+
+# 3.2. Use the categories
+## Problem: The random imputation leads to different birth ages
+# for the same children in consecutive waves
+
+# Estimate the result
+res1 <- age_categories(data = fert, variable = "nchi_non_res_0_4")
+res2 <- age_categories(data = fert, variable = "nchi_non_res_5_14")
+res3 <- age_categories(data = fert, variable = "nchi_non_res15_24")
+
+# Get the data
+birth_ages <- cbind(res1, res2, res3)
 
 # Load the non-resident children from the fertility modules
 num_nr <- fert[, nchild_non_res, by = .(id, wave)]
-num_nr[, .(max_nchild_non_res = nchild_non_res, spells = .N), by = id]
+num_nr <- num_nr[, .(max_nchild_non_res = nchild_non_res, spells = .N), by = id]
 
 
-
-# Load the 
 
 
 # 4. Estimate deceased children ---------------------------------

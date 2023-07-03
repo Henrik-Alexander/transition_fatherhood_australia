@@ -23,6 +23,22 @@ lapply(folders, gen_folder)
 
 `%notin%` <- Negate(`%in%`)
 
+### Sample date function ------------------------------------
+
+sample_date <- function(min, max) {
+    res <- lubridate::interval(min, max) / lubridate::days(1)
+    loc <- vector("integer", length = length(res))
+     for (i in seq_along(res)) {
+      if (!is.na(res[i])) {
+      loc[i] <- sample(1:res[i], 1)
+      } else { 
+      loc[i] <- lubridate::NA_Date_
+      }
+    }
+    tmp <- min + loc
+return(tmp)
+}
+
 #### Tabulate function --------------------------------------
 
 tab <- function(...){
@@ -40,6 +56,43 @@ str_hits <- function(string, pattern){
   loc <- str_detect(string, pattern)
   tmp <- string[loc]
   return(tmp)
+}
+
+### Estimate the birth year of categorical child ----------
+
+age_categories <- function(data, variable = "nchi_non_res15_24"){
+
+# Get the age boundaries
+labs <- stringr::str_extract_all(variable, "[0-9]*")[[1]]
+labs <- labs[labs != ""]
+lower <- labs[1]  |> as.numeric()
+upper <- labs[2]  |> as.numeric()
+
+# Get the count
+birth_counts <- unlist(data[, ..variable])
+birth_counts[birth_counts < 0 | is.na(birth_counts)] <- 0
+
+# Get the interview year
+int_year <- lubridate::year(data$int_date)
+
+# Create a result matrix
+res <- matrix(NA, nrow = length(int_year), ncol = max(birth_counts))
+res <- as.data.frame(res)
+var_names <- names(res) <- paste0("child_", 1:max(birth_counts))
+
+
+# Get the birth dates
+birth_year <- year(data$birth_date)
+
+# Extract the information
+for (i in seq_along(int_year)) {
+tmp <- seq(int_year[i] - upper, int_year[i] - lower)
+counts <- birth_counts[i]
+tmp <-  sample(tmp, size = counts) - birth_year[i]
+for (j in seq_along(counts)) res[i, j] <- tmp[j] 
+}
+
+return(res)
 }
 
 # Create long data of households --------------------------

@@ -1,5 +1,9 @@
 ## Functions
 
+#### Set max.print to 1000 ------------------------
+
+options(max.print = 1000)
+
 
 #### Create directory structure -------------------
 

@@ -48,29 +48,30 @@ bir_rp <- bir_rp[, .(birth    = nch - lag_nch, wave, lag_nch, min_age,
 rp <- merge(rp, bir_rp, by = c("id", "wave"))
 
 # Function: Sample a birth date for the children using a uniform distribution
-sample_date <- function(min, max, births) {
-  if (!is.na(min) & !is.na(max) & births >= 0 & !is.na(births)) {
-    tmp <-  sample(x = seq(from = min, to = max, by = "day"),
-               size = 1)
-  } else {
-    tmp <- lubridate::NA_Date_
-  }
-  return(tmp)
+sample_date <- function(min, max) {
+    res <- lubridate::interval(min, max) / lubridate::days(1)
+    loc <- vector("integer", length = length(res))
+     for (i in seq_along(res)) {
+      if (!is.na(res[i])) {
+      loc[i] <- sample(1:res[i], 1)
+      } else { 
+      loc[i] <- lubridate::NA_Date_
+      }
+    }
+    tmp <- min + loc
+return(tmp)
 }
 
 # Sample the birth date
-dates <- pmap(.l = list(rp$min_date, rp$int_date, rp$birth), .f = sample_date)
-
-# Bind with the respondent date
-rp[, birth_date := dates]
+rp[, child_birth_date := sample_date(min_date, int_date)]
 
 # Estimate the age at birth
-rp[, age_par :=  as.numeric(interval(rp$child_birth_date, rp$birth_date))]
+rp[, age_par :=  as.numeric(interval(child_birth_date, birth_date))]
 
 ## Problem: negative births
 #  Cross check by education
 table(rp$birth, rp$edu)
-# Apparently the negative birth counts are concentrated in lower education strata
+# Negative birth counts are concentrated in lower education strata
 
 # 2. Estimate the person members in hh ---------------------------
 
@@ -102,8 +103,7 @@ random_date <- function(min, max) {
 # Apply map to dates is a known problem:
 # See the discussion: https://github.com/tidyverse/purrr/issues/358
 dates <- map2(.x = birth_date$min, .y = birth_date$max, .f = random_date)
-birth_date$birth_date <- lubridate::NA_Date_
-for (i in seq_along(birth_dates)) birth_date$birth_date[i] <- dates[i]
+birth_date[, birth_date := dates]
 
 # Merge the data sets
 hh_long <- merge(hh_long, birth_date[, .(pid, birth_date)], 
@@ -188,7 +188,8 @@ data <- data |>
 
 # Create a birth variable
 data <- data |>
-  mutate(birth = ifelse(lag(tchad) != tchad & !is.na(tchad) & !is.na(tchad), 1, 0))
+  mutate(birth = ifelse(lag(tchad) != tchad & !is.na(tchad) & !is.na(tchad),
+   1, 0))
 
 # Filter respondents who have not had a birth in the first wave
 data <- data |>

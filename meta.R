@@ -11,3 +11,6 @@ source("code/02_household_data.R")
 
 # 3. Recode the respondent data
 source("code/03_respondent_person.R")
+
+# Create transitions to parenthood
+source("code/04_create_transitions.R")

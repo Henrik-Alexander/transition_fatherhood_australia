@@ -32,7 +32,8 @@ vars <- c("xwaveid", "hhrpid",    # Panel information
   "hhiage", "hgage", "hgagef",    # Respondents age
   "hgsex",                        # Demographics
   "hhwte", "hhwtrps", "hhwtrp",   # Weigths
-  "edagels", "hhidate")                      # Education
+  "rcage", "ncage",     
+  "edagels", "hhidate")           # Education
 
 ### Specify the fertility questionnaires --------------------------
 
@@ -75,6 +76,7 @@ names(dta) <- str_remove(names(dta), paste0("^", waves[wave]))
 
 # Transform the date
 dta$hhidate <- dmy(dta$hhidate)
+
 
 ### Fertility data -------------------------------------
 if (wave %in% fert_waves) {
@@ -130,23 +132,35 @@ rp <- rp |>
     int_date = hhidate
   )
 
-### Create a birth date variable -----------------------------------
+### Resident children ----------------------------------------------
 
-# Select the age and birthdate variable
-birth_date <- rp[, .(id, wave, birth = int_date %m-% years(age))]
+# Create the vector
+cols_rcage <- paste0("rcage", 1:8)
+cols_yob_rcage <- paste0("res_yob_", 1:8)
 
-# Get the min and max date
-birth_date <- birth_date[, .(min = min(birth), max = max(birth)), by = id]
+# Estimate the year of birth
+rp[, (cols_yob_rcage) := lapply(.SD, function(x) ifelse(x < 0, NA, year(int_date) - x)), .SDcols = cols_rcage]
 
-# Estimate the random birth date
-birth_date[, birth_date := sample_date(min, max)]
+### Non-resident children ------------------------------------------
 
-# Merge the data sets
-rp <- merge(rp, birth_date[, .(id, birth_date)], all = TRUE)
+# Create the vector
+cols_ncage <- paste0("rcage", 1:8)
+cols_yob_ncage <- paste0("non_res_yob_", 1:8)
+
+# Estimate the year of birth
+rp[, (cols_yob_ncage) := lapply(.SD, function(x) ifelse(x < 0, NA, year(int_date) - x)), .SDcols = cols_ncage]
+
+### Estimate the age at parenthood --------------------------------
+
+# Create the cols vector
+cols_birth <- c(cols_yob_ncage, cols_yob_rcage)
+cols_age_birth <- paste0("age_birth_", 1:length(cols_birth))
+
+# Estimate the age at birth
+rp[, (cols_yob_ncage) := lapply(.SD, function(x) ifelse(x < 0, NA, year(int_date) - age - x )), .SDcols = cols_ncage]
 
 # Save the data
 save(rp, file = "data/rp_data.Rda")
-
 
 ### Save the birth dates ---------------------------
 
